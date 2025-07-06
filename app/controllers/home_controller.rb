@@ -1,7 +1,8 @@
 class HomeController < ApplicationController
   def index
-    @teams = Team.all.order(wins: :desc)
+    @teams = Team.all.order(:name)
     @picks = session[:picks] || {}
+    @current_league = League.find(session[:current_league_id]) if session[:current_league_id]
   end
 
   def pick_over
@@ -39,5 +40,25 @@ class HomeController < ApplicationController
   def reset_picks
   session[:picks] = {}
   redirect_to root_path
+  end
+
+  def reset_session
+    session[:picks] = {}
+    session[:user_name] = nil
+    session[:current_league_id] = nil
+    redirect_to root_path, notice: "Session completely cleared! You are now a new user."
+  end
+
+  def reset_all_data
+    # Clear all database data
+    Pick.destroy_all
+    League.destroy_all
+
+    # Clear session
+    session[:picks] = {}
+    session[:user_name] = nil
+    session[:current_league_id] = nil
+
+    redirect_to root_path, notice: "All leagues and picks deleted! Fresh start!"
   end
 end

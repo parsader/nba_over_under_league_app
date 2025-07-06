@@ -10,7 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_05_203512) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_06_012652) do
+  create_table "leagues", force: :cascade do |t|
+    t.string "name"
+    t.integer "max_users"
+    t.integer "max_picks_per_user"
+    t.string "join_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "picks", force: :cascade do |t|
+    t.string "user_name"
+    t.integer "league_id"
+    t.integer "team_id", null: false
+    t.string "pick_type"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id"], name: "index_picks_on_team_id"
+  end
+
   create_table "teams", force: :cascade do |t|
     t.string "name"
     t.integer "wins"
@@ -19,4 +38,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_05_203512) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
+
+  add_foreign_key "picks", "teams"
 end

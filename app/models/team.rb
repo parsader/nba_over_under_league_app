@@ -1,4 +1,6 @@
 class Team < ApplicationRecord
+  has_many :picks, dependent: :destroy
+
   validates :name, presence: true
   validates :over_under_line, presence: true
 

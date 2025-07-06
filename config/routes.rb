@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  get "leagues/index"
+  get "leagues/show"
+  get "leagues/new"
+  get "leagues/create"
   root "home#index"
 
   # Routes for making picks
@@ -7,7 +11,16 @@ Rails.application.routes.draw do
 
   # Reset route for testing
   post "reset_picks", to: "home#reset_picks", as: "reset_picks"
+  post "reset_session", to: "home#reset_session", as: "reset_session"
+  post "reset_all_data", to: "home#reset_all_data", as: "reset_all_data"
 
+  # League routes
+  resources :leagues, only: [ :index, :show, :new, :create ]
+  post "join_league", to: "leagues#join_by_code", as: "join_league"
+
+  # Pick routes for leagues
+  post "leagues/:league_id/picks/over/:team_id", to: "leagues#pick_over", as: "league_pick_over"
+  post "leagues/:league_id/picks/under/:team_id", to: "leagues#pick_under", as: "league_pick_under"
 
 
   # get "home/index"

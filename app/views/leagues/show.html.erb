@@ -1,0 +1,194 @@
+<div class="container mx-auto px-4 py-8">
+  <!-- League Header -->
+  <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-6 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-3xl font-bold mb-2"><%= @league.name %></h1>
+        <div class="space-y-1 text-blue-100">
+          <p>Join Code: <span class="font-mono bg-blue-600 px-3 py-1 rounded text-white"><%= @league.join_code %></span></p>
+          <p>Users: <%= @league.user_count %>/<%= @league.max_users %> • Max picks per user: <%= @league.max_picks_per_user %></p>
+          <p>You are: <span class="font-semibold text-yellow-300"><%= session[:user_name] %></span></p>
+        </div>
+      </div>
+      <div class="text-right space-y-2">
+        <%= link_to "← All Leagues", leagues_path, class: "block text-blue-100 hover:text-white" %>
+        <%= link_to "← Home", root_path, class: "block text-blue-100 hover:text-white" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- User's Pick Summary -->
+  <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+    <h2 class="text-lg font-semibold text-yellow-800 mb-2">Your Picks</h2>
+    <p class="text-yellow-700">
+      <%= @user_picks.count %>/<%= @league.max_picks_per_user %> picks made
+      <% if @user_picks.count >= @league.max_picks_per_user %>
+        <span class="font-semibold">(Maximum reached!)</span>
+      <% end %>
+    </p>
+  </div>
+
+  <!-- Available Teams for Picking -->
+  <div class="bg-white shadow-lg rounded-lg mb-8">
+    <div class="bg-gray-50 px-6 py-4 border-b">
+      <h2 class="text-xl font-semibold text-gray-800">Available Teams</h2>
+      <p class="text-gray-600 text-sm mt-1">
+        <%= @teams.count %> teams available • Each team can only be picked once
+      </p>
+    </div>
+    
+    <% if @teams.any? && @user_picks.count < @league.max_picks_per_user %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">O/U Line</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projected</th>
+              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pick Over</th>
+              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pick Under</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @teams.each_with_index do |team, index| %>
+              <tr class="<%= index.even? ? 'bg-white' : 'bg-gray-50' %> hover:bg-blue-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900"><%= team.name %></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= team.wins %>-<%= team.losses %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= team.over_under_line %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= team.projected_wins %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <%= form_with url: league_pick_over_path(@league, team), method: :post, local: true, class: "inline" do |f| %>
+                    <%= f.submit "▲ OVER", class: "bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium text-sm transition duration-200" %>
+                  <% end %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <%= form_with url: league_pick_under_path(@league, team), method: :post, local: true, class: "inline" do |f| %>
+                    <%= f.submit "▼ UNDER", class: "bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium text-sm transition duration-200" %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% elsif @user_picks.count >= @league.max_picks_per_user %>
+      <div class="px-6 py-8 text-center text-gray-500">
+        <p class="text-lg font-medium">You've reached the maximum <%= @league.max_picks_per_user %> picks!</p>
+        <p>Check out the standings below to see how you're doing.</p>
+      </div>
+    <% else %>
+      <div class="px-6 py-8 text-center text-gray-500">
+        <p class="text-lg">All teams have been picked!</p>
+        <p>Check out the standings below.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-8">
+    <!-- Your Picks -->
+    <div class="bg-white shadow-lg rounded-lg">
+      <div class="bg-blue-50 px-6 py-4 border-b">
+        <h2 class="text-xl font-semibold text-blue-800">Your Picks</h2>
+      </div>
+      
+      <% if @user_picks.any? %>
+        <div class="divide-y divide-gray-200">
+          <% @user_picks.each do |pick| %>
+            <div class="px-6 py-4">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="font-medium text-gray-900"><%= pick.team.name %></h3>
+                  <p class="text-sm text-gray-500">
+                    <span class="<%= pick.pick_type == 'over' ? 'text-green-600' : 'text-red-600' %> font-semibold">
+                      <%= pick.pick_type.upcase %>
+                    </span>
+                    <%= pick.team.over_under_line %>
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm text-gray-500">Projected: <%= pick.team.projected_wins %></div>
+                  <div class="<%= pick.current_score > 0 ? 'text-green-600' : 'text-red-600' %> font-semibold">
+                    <%= pick.current_score > 0 ? '+' : '' %><%= pick.current_score %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        
+        <!-- Your Total Score -->
+        <div class="bg-gray-50 px-6 py-4 border-t">
+          <% total_score = @user_picks.sum(&:current_score) %>
+          <div class="flex justify-between items-center">
+            <span class="font-medium text-gray-700">Your Total Score:</span>
+            <span class="text-lg font-bold <%= total_score > 0 ? 'text-green-600' : 'text-red-600' %>">
+              <%= total_score > 0 ? '+' : '' %><%= total_score.round(1) %>
+            </span>
+          </div>
+        </div>
+      <% else %>
+        <div class="px-6 py-8 text-center text-gray-500">
+          <p>No picks yet!</p>
+          <p class="text-sm">Pick some teams above to get started.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- League Standings -->
+    <div class="bg-white shadow-lg rounded-lg">
+      <div class="bg-green-50 px-6 py-4 border-b">
+        <h2 class="text-xl font-semibold text-green-800">League Standings</h2>
+      </div>
+      
+      <% if @standings.any? %>
+        <div class="divide-y divide-gray-200">
+          <% @standings.each_with_index do |standing, index| %>
+            <div class="px-6 py-4 <%= standing[:user_name] == session[:user_name] ? 'bg-yellow-50' : '' %>">
+              <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                  <div class="flex-shrink-0">
+                    <% if index == 0 %>
+                      <span class="inline-flex items-center justify-center w-8 h-8 bg-yellow-400 text-yellow-900 rounded-full text-sm font-bold">1</span>
+                    <% elsif index == 1 %>
+                      <span class="inline-flex items-center justify-center w-8 h-8 bg-gray-300 text-gray-700 rounded-full text-sm font-bold">2</span>
+                    <% elsif index == 2 %>
+                      <span class="inline-flex items-center justify-center w-8 h-8 bg-orange-300 text-orange-900 rounded-full text-sm font-bold">3</span>
+                    <% else %>
+                      <span class="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-600 rounded-full text-sm font-bold"><%= index + 1 %></span>
+                    <% end %>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900 <%= standing[:user_name] == session[:user_name] ? 'text-yellow-700' : '' %>">
+                      <%= standing[:user_name] %>
+                      <%= "(You)" if standing[:user_name] == session[:user_name] %>
+                    </h3>
+                    <p class="text-sm text-gray-500"><%= standing[:pick_count] %> picks</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-bold <%= standing[:total_score] > 0 ? 'text-green-600' : 'text-red-600' %>">
+                    <%= standing[:total_score] > 0 ? '+' : '' %><%= standing[:total_score].round(1) %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="px-6 py-8 text-center text-gray-500">
+          <p>No picks made yet!</p>
+          <p class="text-sm">Be the first to make a pick.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

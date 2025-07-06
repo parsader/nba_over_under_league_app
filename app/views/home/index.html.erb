@@ -1,14 +1,53 @@
 <div class="container mx-auto px-4 py-8">
-  <!-- Test element to verify Tailwind is working -->
-  <div class="bg-blue-500 text-white p-4 rounded mb-4">
-    ✅ If you see this blue box, Tailwind is working!
+  <!-- Header with League Navigation -->
+  <div class="bg-blue-500 text-white p-4 rounded mb-6">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold">NBA Over/Under League</h1>
+        <% if @current_league %>
+          <p class="text-blue-100">Currently in: <span class="font-semibold"><%= @current_league.name %></span></p>
+        <% else %>
+          <p class="text-blue-100">Create or join a league to start playing!</p>
+        <% end %>
+      </div>
+      <div class="space-x-3">
+        <%= link_to "View Leagues", leagues_path, class: "bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium" %>
+        <%= link_to "Create League", new_league_path, class: "bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-medium" %>
+      </div>
+    </div>
   </div>
 
+  <!-- Current League Quick Link -->
+  <% if @current_league %>
+    <div class="mb-6">
+      <%= link_to @current_league, class: "block bg-gray-100 hover:bg-gray-200 p-4 rounded-lg border" do %>
+        <h2 class="text-lg font-semibold text-gray-800">Go to Current League: <%= @current_league.name %></h2>
+        <p class="text-gray-600">Join code: <span class="font-mono bg-gray-200 px-2 py-1 rounded"><%= @current_league.join_code %></span></p>
+      <% end %>
+    </div>
+  <% end %>
+
     <!-- Add this reset button for testing -->
-  <div class="mb-4">
-    <%= form_with url: reset_picks_path, method: :post, local: true, class: "inline" do |f| %>
-      <%= f.submit "Reset All Picks", class: "bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded" %>
-    <% end %>
+  <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+    <h2 class="text-lg font-semibold text-red-800 mb-3">🧪 Testing Controls</h2>
+    <div class="flex flex-wrap gap-3">
+      <%= form_with url: reset_picks_path, method: :post, local: true, class: "inline" do |f| %>
+        <%= f.submit "Clear Session Picks", class: "bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm" %>
+      <% end %>
+      
+      <%= form_with url: reset_session_path, method: :post, local: true, class: "inline" do |f| %>
+        <%= f.submit "Reset Session (New User)", class: "bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm" %>
+      <% end %>
+      
+      <%= form_with url: reset_all_data_path, method: :post, local: true, 
+          data: { confirm: "This will delete ALL leagues and picks. Are you sure?" }, class: "inline" do |f| %>
+        <%= f.submit "🗑️ DELETE ALL DATA", class: "bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded text-sm font-bold" %>
+      <% end %>
+    </div>
+    <p class="text-red-600 text-xs mt-2">
+      Current user: <span class="font-mono"><%= session[:user_name] || "None" %></span> | 
+      Current league: <span class="font-mono"><%= session[:current_league_id] || "None" %></span>
+    </p>
   </div>
   
   <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">NBA Over/Under Teams</h1>
