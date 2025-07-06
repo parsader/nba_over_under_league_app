@@ -1,5 +1,15 @@
 Rails.application.routes.draw do
   root "home#index"
+
+  # Routes for making picks
+  post "picks/over/:team_id", to: "home#pick_over", as: "pick_over"
+  post "picks/under/:team_id", to: "home#pick_under", as: "pick_under"
+
+  # Reset route for testing
+  post "reset_picks", to: "home#reset_picks", as: "reset_picks"
+
+
+
   # get "home/index"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
