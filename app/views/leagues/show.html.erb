@@ -31,13 +31,13 @@
   <!-- Available Teams for Picking -->
   <div class="bg-white shadow-lg rounded-lg mb-8">
     <div class="bg-gray-50 px-6 py-4 border-b">
-      <h2 class="text-xl font-semibold text-gray-800">Available Teams</h2>
+      <h2 class="text-xl font-semibold text-gray-800">Teams</h2>
       <p class="text-gray-600 text-sm mt-1">
-        <%= @teams.count %> teams available • Each team can only be picked once
+        <%= @all_teams.count %> total teams • Each team can only be picked once
       </p>
     </div>
     
-    <% if @teams.any? && @user_picks.count < @league.max_picks_per_user %>
+    <% if @all_teams.any? %>
       <div class="overflow-x-auto">
         <table class="min-w-full">
           <thead class="bg-gray-50">
@@ -51,10 +51,35 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <% @teams.each_with_index do |team, index| %>
-              <tr class="<%= index.even? ? 'bg-white' : 'bg-gray-50' %> hover:bg-blue-50">
+            <% 
+            # Separate teams: available first, then fully picked
+            available_teams = []
+            fully_picked_teams = []
+            
+            @all_teams.each do |team|
+              over_pick = @league_picks.find { |p| p.team_id == team.id && p.pick_type == 'over' }
+              under_pick = @league_picks.find { |p| p.team_id == team.id && p.pick_type == 'under' }
+              
+              if over_pick && under_pick
+                fully_picked_teams << [team, over_pick, under_pick]
+              else
+                available_teams << [team, over_pick, under_pick]
+              end
+            end
+            
+            # Display available teams first, then fully picked teams
+            (available_teams + fully_picked_teams).each_with_index do |(team, over_pick, under_pick), index|
+              is_fully_picked = over_pick && under_pick
+              user_maxed_out = @user_picks.count >= @league.max_picks_per_user
+            %>
+              <tr class="<%= index.even? ? 'bg-white' : 'bg-gray-50' %> <%= is_fully_picked ? 'opacity-60' : 'hover:bg-blue-50' %>">
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900"><%= team.name %></div>
+                  <div class="text-sm font-medium text-gray-900">
+                    <%= team.name %>
+                    <% if is_fully_picked %>
+                      <span class="text-xs text-gray-500">(Fully Picked)</span>
+                    <% end %>
+                  </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <%= team.wins %>-<%= team.losses %>
@@ -65,14 +90,44 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <%= team.projected_wins %>
                 </td>
+                
+                <!-- Over Button -->
                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <%= form_with url: league_pick_over_path(@league, team), method: :post, local: true, class: "inline" do |f| %>
-                    <%= f.submit "▲ OVER", class: "bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium text-sm transition duration-200" %>
+                  <% if over_pick %>
+                    <!-- Over already picked - grey button -->
+                    <button disabled class="bg-gray-300 text-gray-500 px-4 py-2 rounded font-medium text-sm cursor-not-allowed">
+                      ▲ OVER
+                    </button>
+                  <% elsif user_maxed_out %>
+                    <!-- User maxed out picks -->
+                    <button disabled class="bg-gray-200 text-gray-400 px-4 py-2 rounded font-medium text-sm cursor-not-allowed" title="You've reached max picks">
+                      ▲ OVER
+                    </button>
+                  <% else %>
+                    <!-- Available to pick -->
+                    <%= form_with url: league_pick_over_path(@league, team), method: :post, local: true, class: "inline" do |f| %>
+                      <%= f.submit "▲ OVER", class: "bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium text-sm transition duration-200" %>
+                    <% end %>
                   <% end %>
                 </td>
+                
+                <!-- Under Button -->
                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <%= form_with url: league_pick_under_path(@league, team), method: :post, local: true, class: "inline" do |f| %>
-                    <%= f.submit "▼ UNDER", class: "bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium text-sm transition duration-200" %>
+                  <% if under_pick %>
+                    <!-- Under already picked - grey button -->
+                    <button disabled class="bg-gray-300 text-gray-500 px-4 py-2 rounded font-medium text-sm cursor-not-allowed">
+                      ▼ UNDER
+                    </button>
+                  <% elsif user_maxed_out %>
+                    <!-- User maxed out picks -->
+                    <button disabled class="bg-gray-200 text-gray-400 px-4 py-2 rounded font-medium text-sm cursor-not-allowed" title="You've reached max picks">
+                      ▼ UNDER
+                    </button>
+                  <% else %>
+                    <!-- Available to pick -->
+                    <%= form_with url: league_pick_under_path(@league, team), method: :post, local: true, class: "inline" do |f| %>
+                      <%= f.submit "▼ UNDER", class: "bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium text-sm transition duration-200" %>
+                    <% end %>
                   <% end %>
                 </td>
               </tr>
@@ -80,15 +135,9 @@
           </tbody>
         </table>
       </div>
-    <% elsif @user_picks.count >= @league.max_picks_per_user %>
-      <div class="px-6 py-8 text-center text-gray-500">
-        <p class="text-lg font-medium">You've reached the maximum <%= @league.max_picks_per_user %> picks!</p>
-        <p>Check out the standings below to see how you're doing.</p>
-      </div>
     <% else %>
       <div class="px-6 py-8 text-center text-gray-500">
-        <p class="text-lg">All teams have been picked!</p>
-        <p>Check out the standings below.</p>
+        <p class="text-lg">No teams available!</p>
       </div>
     <% end %>
   </div>

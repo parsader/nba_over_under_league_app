@@ -4,7 +4,7 @@ class Pick < ApplicationRecord
 
   validates :user_name, presence: true
   validates :pick_type, inclusion: { in: %w[over under] }
-  validates :team_id, uniqueness: { scope: [ :league_id ] }
+  validates :team_id, uniqueness: { scope: [ :league_id, :pick_type ] }
 
   def current_score
     projected = team.projected_wins

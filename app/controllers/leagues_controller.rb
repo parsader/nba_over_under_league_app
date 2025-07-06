@@ -6,9 +6,16 @@ class LeaguesController < ApplicationController
   end
 
   def show
+    # @league = League.find(params[:id])
+    # @teams = @league.available_teams.order(:name)
+    # @user_picks = @league.picks.where(user_name: session[:user_name]).includes(:team)
+    # @standings = @league.standings
+
+    # session[:current_league_id] = @league.id
     @league = League.find(params[:id])
-    @teams = @league.available_teams.order(:name)
+    @all_teams = Team.all.order(:name)
     @user_picks = @league.picks.where(user_name: session[:user_name]).includes(:team)
+    @league_picks = @league.picks.includes(:team) # All picks in league
     @standings = @league.standings
 
     session[:current_league_id] = @league.id
@@ -76,9 +83,15 @@ class LeaguesController < ApplicationController
     @league = League.find(params[:league_id])
     @team = Team.find(params[:team_id])
 
-    # Check if team already picked in this league
-    if @league.picks.exists?(team_id: @team.id)
-      redirect_to @league, alert: "#{@team.name} already picked by someone else!"
+    # # Check if team already picked in this league
+    # if @league.picks.exists?(team_id: @team.id)
+    #   redirect_to @league, alert: "#{@team.name} already picked by someone else!"
+    #   return
+    # end
+    # Check if THIS SPECIFIC pick type already exists (not just any pick for this team)
+    existing_pick = @league.picks.find_by(team_id: @team.id, pick_type: pick_type)
+    if existing_pick
+      redirect_to @league, alert: "#{@team.name} #{pick_type.upcase} already picked by #{existing_pick.user_name}!"
       return
     end
 
