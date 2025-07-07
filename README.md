@@ -113,6 +113,7 @@ A Ruby on Rails application that allows users to create and participate in NBA o
 - [ ] Trade functionality between users  
 - [ ] League commissioner controls
 - [ ] League Chat Features
+- [ ] Make use of Partials to organize the view code, and make general UI improvments
 
 ## Bugs To be Fixed
 - [ ] Can go over max leagues, create alert
