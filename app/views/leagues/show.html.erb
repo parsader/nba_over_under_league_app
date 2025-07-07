@@ -17,6 +17,49 @@
     </div>
   </div>
 
+  <!-- Draft Status -->
+  <% if @league.draft_started? %>
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-semibold text-green-800">🏀 Draft In Progress</h2>
+          <% current_picker = @league.current_picker %>
+          <% if current_picker %>
+            <p class="text-green-700">
+              <span class="font-bold"><%= current_picker %></span> is up to pick!
+              <% if current_picker == session[:user_name] %>
+                <span class="text-green-800 font-bold">(Your turn!)</span>
+              <% end %>
+            </p>
+          <% else %>
+            <p class="text-green-700 font-bold">🎉 Draft Complete!</p>
+          <% end %>
+        </div>
+        <div class="text-right">
+          <p class="text-sm text-green-600">Pick <%= @league.picks.count + 1 %> of <%= @league.user_count * @league.max_picks_per_user %></p>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-semibold text-yellow-800">⏳ Draft Not Started</h2>
+          <p class="text-yellow-700">Waiting for someone to start the draft.</p>
+        </div>
+        <div>
+          <% if @league.user_count >= 2 %>
+            <%= form_with url: start_draft_league_path(@league), method: :post, local: true, class: "inline" do |f| %>
+              <%= f.submit "🚀 Start Draft", class: "bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium" %>
+            <% end %>
+          <% else %>
+            <p class="text-yellow-600 text-sm">Need at least 2 users to start draft</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <!-- User's Pick Summary -->
   <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
     <h2 class="text-lg font-semibold text-yellow-800 mb-2">Your Picks</h2>
@@ -31,71 +74,73 @@
   <!-- Draft Grid -->
   <div class="bg-white shadow-lg rounded-lg mb-8">
     <div class="bg-purple-50 px-6 py-4 border-b">
-      <h2 class="text-xl font-semibold text-purple-800">Draft Grid</h2>
+      <h2 class="text-xl font-semibold text-purple-800">📋 Draft Grid</h2>
       <p class="text-purple-600 text-sm mt-1">
-        <%= @league.picks.count %> total picks • Max <%= @league.max_picks_per_user %> picks per user
+        <% if @league.draft_started? %>
+          Snake draft order • <%= @league.picks.count %> of <%= @league.user_count * @league.max_picks_per_user %> picks made
+        <% else %>
+          Draft order will be randomized when draft starts
+        <% end %>
       </p>
     </div>
     
-    <% if @league.picks.any? %>
+    <% if @league.draft_started? && @draft_grid.any? %>
       <div class="overflow-x-auto">
-        <%
-        # Get all users and organize their picks by order
-        users = @league.users
-        max_rounds = @league.max_picks_per_user
-        
-        # Create hash of user picks organized by pick order
-        user_picks_by_round = {}
-        users.each do |user_name|
-          user_picks = @league.picks.where(user_name: user_name).includes(:team).order(:created_at)
-          user_picks_by_round[user_name] = user_picks.each_with_index.map { |pick, index| [index + 1, pick] }.to_h
-        end
-        %>
-        
         <table class="min-w-full">
           <thead class="bg-gray-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                 Round
               </th>
-              <% users.each do |user_name| %>
+              <% (1..@league.user_count).each do |position| %>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                  <div class="<%= user_name == session[:user_name] ? 'text-yellow-700 font-bold' : '' %>">
-                    <%= user_name %>
-                    <% if user_name == session[:user_name] %>
-                      <div class="text-xs text-yellow-600">(You)</div>
-                    <% end %>
-                  </div>
-                  <div class="text-xs text-gray-400 font-normal mt-1">
-                    <%= user_picks_by_round[user_name]&.count || 0 %>/<%= @league.max_picks_per_user %> picks
-                  </div>
+                  Pick <%= position %>
                 </th>
               <% end %>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <% (1..max_rounds).each do |round| %>
+            <% (1..@league.max_picks_per_user).each do |round| %>
               <tr class="<%= round.even? ? 'bg-gray-50' : 'bg-white' %>">
                 <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200 bg-gray-100">
                   Round <%= round %>
                 </td>
-                <% users.each do |user_name| %>
-                  <td class="px-4 py-4 whitespace-nowrap text-center border-r border-gray-200 <%= user_name == session[:user_name] ? 'bg-yellow-50' : '' %>">
-                    <% pick = user_picks_by_round[user_name]&.[](round) %>
-                    <% if pick %>
-                      <div class="text-sm">
-                        <div class="font-medium text-gray-900"><%= pick.team.name %></div>
-                        <div class="<%= pick.pick_type == 'over' ? 'text-green-600' : 'text-red-600' %> font-bold text-lg">
-                          <%= pick.pick_type == 'over' ? '▲' : '▼' %>
-                        </div>
-                        <div class="text-xs text-gray-500"><%= pick.team.over_under_line %></div>
-                        <div class="text-xs <%= pick.current_score > 0 ? 'text-green-600' : 'text-red-600' %> font-medium">
-                          <%= pick.current_score > 0 ? '+' : '' %><%= pick.current_score %>
-                        </div>
+                <% (1..@league.user_count).each do |position| %>
+                  <% 
+                  user_in_position = @draft_grid[round][position]
+                  # Find the pick for this user in this round
+                  user_picks_in_round = @league.picks.where(user_name: user_in_position).order(:created_at)
+                  pick_in_round = user_picks_in_round[round - 1] if user_picks_in_round.count >= round
+                  
+                  # Check if it's this user's turn to pick
+                  total_picks_before = ((round - 1) * @league.user_count) + (position - 1)
+                  is_current_pick = @league.picks.count == total_picks_before && @league.current_picker == user_in_position
+                  %>
+                  <td class="px-4 py-4 whitespace-nowrap text-center border-r border-gray-200 <%= user_in_position == session[:user_name] ? 'bg-yellow-50' : '' %> <%= is_current_pick ? 'ring-4 ring-green-300 bg-green-50' : '' %>">
+                    <div class="text-sm">
+                      <div class="font-medium text-gray-900 mb-1">
+                        <%= user_in_position %>
+                        <%= "(You)" if user_in_position == session[:user_name] %>
                       </div>
-                    <% else %>
-                      <div class="text-gray-300 text-sm">—</div>
-                    <% end %>
+                      <% if pick_in_round %>
+                        <!-- Pick made -->
+                        <div class="font-medium text-gray-900"><%= pick_in_round.team.name %></div>
+                        <div class="<%= pick_in_round.pick_type == 'over' ? 'text-green-600' : 'text-red-600' %> font-bold text-lg">
+                          <%= pick_in_round.pick_type == 'over' ? '▲' : '▼' %>
+                        </div>
+                        <div class="text-xs text-gray-500"><%= pick_in_round.team.over_under_line %></div>
+                        <div class="text-xs <%= pick_in_round.current_score > 0 ? 'text-green-600' : 'text-red-600' %> font-medium">
+                          <%= pick_in_round.current_score > 0 ? '+' : '' %><%= pick_in_round.current_score %>
+                        </div>
+                      <% elsif is_current_pick %>
+                        <!-- Current pick -->
+                        <div class="text-green-600 font-bold text-lg">👆</div>
+                        <div class="text-xs text-green-700 font-medium">UP NOW</div>
+                      <% else %>
+                        <!-- Future pick -->
+                        <div class="text-gray-300 text-sm">—</div>
+                      <% end %>
+                    </div>
                   </td>
                 <% end %>
               </tr>
@@ -103,56 +148,26 @@
           </tbody>
         </table>
       </div>
-        <div class="bg-gray-50 px-6 py-4 border-t">
-        <h3 class="text-sm font-medium text-gray-700 mb-3">Pick Summary by User:</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <% elsif @league.users.any? %>
+      <div class="px-6 py-8 text-center text-gray-500">
+        <p class="text-lg">Current Users in League:</p>
+        <div class="mt-4 flex flex-wrap justify-center gap-2">
           <% @league.users.each do |user_name| %>
-            <% user_picks = @league.picks.where(user_name: user_name).includes(:team).order(:created_at) %>
-            <div class="bg-white rounded p-3 <%= user_name == session[:user_name] ? 'ring-2 ring-yellow-300' : 'border' %>">
-              <h4 class="font-medium text-gray-900 mb-2">
-                <%= user_name %>
-                <%= "(You)" if user_name == session[:user_name] %>
-                <span class="text-sm text-gray-500">(<%= user_picks.count %> picks)</span>
-              </h4>
-              <div class="space-y-1 text-xs">
-                <% user_picks.each_with_index do |pick, pick_index| %>
-                  <div class="flex justify-between items-center">
-                    <span>
-                      <%= pick_index + 1 %>. <%= pick.team.name %>
-                      <span class="<%= pick.pick_type == 'over' ? 'text-green-600' : 'text-red-600' %>">
-                        <%= pick.pick_type == 'over' ? '▲' : '▼' %>
-                      </span>
-                    </span>
-                    <span class="<%= pick.current_score > 0 ? 'text-green-600' : 'text-red-600' %> font-medium">
-                      <%= pick.current_score > 0 ? '+' : '' %><%= pick.current_score %>
-                    </span>
-                  </div>
-                <% end %>
-                <% if user_picks.any? %>
-                  <div class="border-t pt-1 mt-2">
-                    <div class="flex justify-between items-center font-medium">
-                      <span>Total:</span>
-                      <% total = user_picks.sum(&:current_score) %>
-                      <span class="<%= total > 0 ? 'text-green-600' : 'text-red-600' %>">
-                        <%= total > 0 ? '+' : '' %><%= total.round(1) %>
-                      </span>
-                    </div>
-                  </div>
-                <% end %>
-              </div>
-            </div>
+            <span class="<%= user_name == session[:user_name] ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-700' %> px-3 py-1 rounded-full text-sm font-medium">
+              <%= user_name %>
+              <%= "(You)" if user_name == session[:user_name] %>
+            </span>
           <% end %>
         </div>
+        <p class="text-sm mt-4">Start the draft to see the randomized order!</p>
       </div>
-
-     
     <% else %>
       <div class="px-6 py-8 text-center text-gray-500">
-        <p class="text-lg">No picks made yet!</p>
-        <p class="text-sm">Make the first pick below to start the draft.</p>
+        <p class="text-lg">No users in league yet.</p>
       </div>
     <% end %>
   </div>
+
 
   <!-- Available Teams for Picking -->
   <div class="bg-white shadow-lg rounded-lg mb-8">

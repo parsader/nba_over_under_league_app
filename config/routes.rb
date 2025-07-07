@@ -15,7 +15,13 @@ Rails.application.routes.draw do
   post "reset_all_data", to: "home#reset_all_data", as: "reset_all_data"
 
   # League routes
-  resources :leagues, only: [ :index, :show, :new, :create ]
+  # resources :leagues, only: [ :index, :show, :new, :create ]
+  resources :leagues, only: [ :index, :show, :new, :create ] do
+    member do
+      post :start_draft
+    end
+  end
+
   post "join_league", to: "leagues#join_by_code", as: "join_league"
 
   # Pick routes for leagues
